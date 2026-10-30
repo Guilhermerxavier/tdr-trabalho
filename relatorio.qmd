@@ -1,0 +1,221 @@
+
+---
+title: "Acessos às academias de uma rede"
+author: "Guilherme Rosa Xavier"
+lang: pt-BR
+format:
+  html:
+    embed-resources: true
+---
+
+```{r}
+#| label: carregar-dados
+#| include: false
+
+targets::tar_load(
+  c(
+    cadastro,
+    dados,
+    conferencia,
+    sazonalidade,
+    variacao,
+    resumos
+  )
+)
+```
+
+# 1. Os dados
+
+O conjunto de dados apresenta os acessos às academias de uma rede,
+considerando cada academia como unidade de observação. A análise
+compreende os anos de 2023, 2024 e 2025.
+
+O cadastro contém `r dplyr::n_distinct(cadastro$codigo)` academias,
+das quais `r dplyr::n_distinct(dados$codigo)` possuem medições nos
+arquivos anuais. Portanto, há
+`r dplyr::n_distinct(cadastro$codigo) - dplyr::n_distinct(dados$codigo)`
+unidade sem medição.
+
+A variável `plano` identifica as categorias Popular e Premium, enquanto
+`area_m2` representa a área de treinamento de cada academia, em metros
+quadrados. A medida relativa utilizada na análise corresponde à razão
+entre os acessos registrados e a área da unidade.
+
+Os meses sem registro, identificados originalmente pelo símbolo `-`,
+foram tratados como zero nos cálculos das médias mensais relativas e
+dos totais. A contagem de meses com registro considera somente os
+valores observados, preservando a decisão metodológica adotada na
+Lista 03.
+
+A conferência anual apresentada na Tabela @tbl-conferencia permite
+verificar a quantidade de linhas, as unidades com medição, os meses
+sem registro e a soma dos acessos em cada ano.
+
+```{r}
+#| label: tbl-conferencia
+#| tbl-cap: "Conferência dos dados por ano"
+
+knitr::kable(
+  conferencia,
+  digits = 0,
+  align = "r"
+)
+```
+
+A soma dos acessos registrados foi de
+`r format(conferencia$soma_acessos[conferencia$ano == 2023],
+big.mark = ".", decimal.mark = ",")` em 2023,
+`r format(conferencia$soma_acessos[conferencia$ano == 2024],
+big.mark = ".", decimal.mark = ",")` em 2024 e
+`r format(conferencia$soma_acessos[conferencia$ano == 2025],
+big.mark = ".", decimal.mark = ",")` em 2025.
+Esses valores permitem conferir a consistência dos dados com o
+documento original da Lista 03.
+
+# 2. Sazonalidade
+
+A sazonalidade permite observar como a média mensal de acessos por
+metro quadrado varia ao longo dos meses e entre os anos.
+
+A Figura @fig-sazonalidade apresenta a evolução mensal da medida
+relativa para 2023, 2024 e 2025. Cada linha representa um ano, permitindo
+comparar o comportamento ao longo do calendário.
+
+```{r}
+#| label: fig-sazonalidade
+#| fig-cap: "Média mensal de acessos por metro quadrado, por ano."
+
+knitr::include_graphics(
+  targets::tar_read(figura_sazonalidade)
+)
+```
+
+Considerando a média dos três anos para cada mês, o mês de maior média
+foi **`r names(which.max(tapply(sazonalidade$media_mensal_relativa,
+sazonalidade$mes, mean)))`**, enquanto o mês de menor média foi
+**`r names(which.min(tapply(sazonalidade$media_mensal_relativa,
+sazonalidade$mes, mean)))`**.
+
+Essa comparação permite identificar períodos de maior e menor
+intensidade relativa de utilização das academias.
+
+# 3. Variação entre 2023 e 2025
+
+A variação entre os anos foi calculada utilizando a média anual da
+medida relativa de acessos por metro quadrado. Dessa forma, a comparação
+considera a intensidade de utilização em relação à área das academias,
+e não apenas o total absoluto de acessos.
+
+A Tabela @tbl-variacao apresenta a média anual e a variação percentual
+em relação a 2023.
+
+```{r}
+#| label: tbl-variacao
+#| tbl-cap: "Média anual de acessos por metro quadrado e variação percentual."
+
+knitr::kable(
+  variacao,
+  digits = 3,
+  align = "r"
+)
+```
+
+Entre 2023 e 2025, a média anual da medida relativa apresentou uma
+variação de **`r sprintf("%.2f%%",
+variacao$variacao_percentual[variacao$ano == 2025])`**.
+
+Esse resultado indica uma redução da média anual da medida relativa
+no período analisado. A utilização da média, em vez do total de
+acessos, permite uma comparação coerente com a área das unidades.
+
+# 4. Diferenças entre categorias
+
+A comparação entre as categorias Popular e Premium considera a
+distribuição dos acessos por metro quadrado. A Figura
+@fig-categorias apresenta essa distribuição por meio de um gráfico
+de caixas, permitindo observar diferenças de dispersão e posição
+dos valores.
+
+```{r}
+#| label: fig-categorias
+#| fig-cap: "Distribuição dos acessos por metro quadrado, por categoria."
+
+knitr::include_graphics(
+  targets::tar_read(figura_categorias)
+)
+```
+
+A Tabela @tbl-categorias apresenta o número de unidades, o total de
+acessos e a média mensal relativa em cada categoria.
+
+```{r}
+#| label: tbl-categorias
+#| tbl-cap: "Resumo dos acessos por categoria."
+
+knitr::kable(
+  resumos$categoria,
+  digits = 3,
+  align = "r"
+)
+```
+
+A categoria com maior média mensal relativa foi
+**`r resumos$categoria$plano[which.max(resumos$categoria$media_mensal_relativa)]`**,
+com média de
+`r round(max(resumos$categoria$media_mensal_relativa), 3)` acessos
+por metro quadrado. A menor média foi observada na categoria
+**`r resumos$categoria$plano[which.min(resumos$categoria$media_mensal_relativa)]`**,
+com
+`r round(min(resumos$categoria$media_mensal_relativa), 3)`.
+
+Essas diferenças permitem comparar a intensidade relativa de utilização
+entre as categorias, considerando a área das unidades.
+
+# 5. Tabelas da Lista 03
+
+Esta seção apresenta os resumos por unidade e por categoria e ano,
+mantendo a estrutura de análise desenvolvida na Lista 03.
+
+## Resumo por unidade
+
+A Tabela @tbl-unidade apresenta, para cada academia e ano, a quantidade
+de meses com registro, o total anual de acessos e a média mensal
+relativa por metro quadrado.
+
+```{r}
+#| label: tbl-unidade
+#| tbl-cap: "Resumo anual dos acessos por unidade."
+
+knitr::kable(
+  resumos$unidade,
+  digits = 3,
+  align = "r"
+)
+```
+
+## Resumo por categoria e ano
+
+A Tabela @tbl-categoria-ano apresenta os resultados agrupados por
+categoria e ano, permitindo acompanhar a evolução das categorias ao
+longo do período analisado.
+
+```{r}
+#| label: tbl-categoria-ano
+#| tbl-cap: "Resumo dos acessos por categoria e ano."
+
+knitr::kable(
+  resumos$categoria_ano,
+  digits = 3,
+  align = "r"
+)
+```
+
+Os resultados apresentados reúnem a quantidade de unidades, o total
+de acessos e a média mensal relativa. Assim, é possível comparar
+as categorias ao longo dos três anos e observar as diferenças entre
+as academias.
+
+As tabelas, figuras e valores deste relatório foram recuperados dos
+alvos do pipeline, garantindo que os resultados sejam atualizados
+automaticamente quando os dados ou as funções do projeto forem
+alterados.
