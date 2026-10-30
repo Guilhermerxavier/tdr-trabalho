@@ -191,28 +191,30 @@ arquivos_anuais <- list.files(
 
 dados_anuais <- map(
   arquivos_anuais,
-  \(arquivo) read_csv2(
-    arquivo,
-    na = "-",
-    locale = locale(encoding = "Latin1"),
-    col_types = cols(
-      codigo = col_character(),
-      jan = col_double(),
-      fev = col_double(),
-      mar = col_double(),
-      abr = col_double(),
-      mai = col_double(),
-      jun = col_double(),
-      jul = col_double(),
-      ago = col_double(),
-      set = col_double(),
-      out = col_double(),
-      nov = col_double(),
-      dez = col_double()
-    ),
-    show_col_types = FALSE
-  ) |>
-    mutate(origem = arquivo)
+  \(arquivo) {
+    read_csv2(
+      arquivo,
+      na = "-",
+      locale = locale(encoding = "Latin1"),
+      col_types = cols(
+        codigo = col_character(),
+        jan = col_double(),
+        fev = col_double(),
+        mar = col_double(),
+        abr = col_double(),
+        mai = col_double(),
+        jun = col_double(),
+        jul = col_double(),
+        ago = col_double(),
+        set = col_double(),
+        out = col_double(),
+        nov = col_double(),
+        dez = col_double()
+      ),
+      show_col_types = FALSE
+    ) |>
+      mutate(origem = arquivo)
+  }
 )
 
 acessos_todos <- list_rbind(dados_anuais) |>
