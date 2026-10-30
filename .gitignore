@@ -1,0 +1,16 @@
+# Arquivos temporários do R
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# Resultados do targets
+_targets/
+
+# Arquivos gerados pelo Quarto
+relatorio.html
+relatorio_files/
+
+# Arquivos temporários de sistema
+*~
+.DS_Store

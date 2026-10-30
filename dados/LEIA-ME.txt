@@ -1,0 +1,29 @@
+Lista 03 --- dados sorteados para o login guilhermerxavier
+
+Tema: Acessos às academias de uma rede
+Unidade de observação: academia
+
+Arquivos
+
+  acessos_2023.csv, acessos_2024.csv, acessos_2025.csv
+      Uma linha por unidade e uma coluna por mês do ano. A coluna
+      codigo identifica a unidade, e as colunas jan a dez trazem o
+      valor medido: acessos registrados na catraca no mês.
+      Mês sem registro aparece como "-".
+
+  cadastro.csv
+      Uma linha por unidade, com as colunas:
+        codigo        identificador da unidade, o mesmo das medições
+        nome          nome da unidade
+        plano         categoria: Premium ou Popular
+        area_m2       porte: área de treino, em m²
+
+Conferência
+
+  unidades no cadastro:   10
+  unidades com medições:  9
+
+  ano    meses sem registro    soma dos valores registrados
+  2023                    5                          949730
+  2024                    4                          937759
+  2025                    3                          907869

@@ -1,0 +1,246 @@
+---
+title: "Acessos às academias de uma rede"
+author: "Guilherme Rosa Xavier"
+lang: pt-BR
+format:
+  html:
+    self-contained: true
+---
+
+# Exercício 1 — O documento e a leitura
+
+## Leitura dos arquivos
+
+O arquivo `cadastro.csv` usa `;` como separador de campos, ponto como
+separador decimal e codificação ISO-8859-1. O arquivo
+`acessos_2023.csv` usa `;` como separador de campos, ponto como
+separador decimal e codificação ASCII. Nesse arquivo, `-` indica ausência
+de registro.
+
+### Cadastro das unidades
+
+```{r}
+library(readr)
+
+cadastro <- read_delim(
+  "dados/cadastro.csv",
+  delim = ";",
+  locale = locale(
+    decimal_mark = ".",
+    encoding = "ISO-8859-1"
+  ),
+  col_types = cols(
+    codigo = col_character(),
+    nome = col_character(),
+    plano = col_character(),
+    area_m2 = col_double()
+  )
+)
+
+
+acessos_2023 <- read_delim(
+  "dados/acessos_2023.csv",
+  delim = ";",
+  na = "-",
+  locale = locale(
+    decimal_mark = ".",
+    encoding = "ASCII"
+  ),
+  col_types = cols(
+    codigo = col_character(),
+    jan = col_double(),
+    fev = col_double(),
+    mar = col_double(),
+    abr = col_double(),
+    mai = col_double(),
+    jun = col_double(),
+    jul = col_double(),
+    ago = col_double(),
+    set = col_double(),
+    out = col_double(),
+    nov = col_double(),
+    dez = col_double()
+  )
+)
+
+```
+
+
+# Exercício 2 — Arrumar a tabela
+
+## Transformação para o formato longo
+
+A tabela anual está em formato largo, com os meses representados como
+colunas. A transformação para o formato longo deixa uma linha para cada
+unidade e mês, com três colunas: `codigo`, `mes` e `acessos`.
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+acessos_2023_long <- acessos_2023 |>
+  pivot_longer(
+    cols = -codigo,
+    names_to = "mes",
+    values_to = "acessos"
+  ) |>
+  mutate(
+    mes = factor(
+      mes,
+      levels = c(
+        "jan", "fev", "mar", "abr", "mai", "jun",
+        "jul", "ago", "set", "out", "nov", "dez"
+      )
+    )
+  )
+
+nrow(acessos_2023_long)
+sum(is.na(acessos_2023_long$acessos))
+```
+
+# Exercício 3 — Juntar ao cadastro
+
+## Junção com o cadastro
+
+A tabela longa contém várias linhas para cada unidade, enquanto o cadastro
+contém uma linha por unidade. A junção pela chave `codigo` mantém todas
+as linhas da tabela longa e acrescenta as informações do cadastro.
+
+```{r}
+n_linhas_antes <- nrow(acessos_2023_long)
+
+acessos_2023_cadastro <- acessos_2023_long |>
+  left_join(
+    cadastro,
+    by = "codigo",
+    relationship = "many-to-one"
+  )
+
+n_linhas_depois <- nrow(acessos_2023_cadastro)
+
+n_linhas_antes
+n_linhas_depois
+
+acessos_2023_cadastro <- acessos_2023_cadastro |>
+  mutate(
+    acessos_por_m2 = acessos / area_m2
+  )
+
+sem_medicao <- cadastro |>
+  anti_join(
+    acessos_2023_long,
+    by = "codigo"
+  )
+
+sem_medicao
+
+```
+
+# Exercício 4 — Resumir por grupo
+
+## Decisão sobre os meses sem registro
+
+Os meses sem registro serão tratados como zero nos cálculos do total anual
+e da média mensal da medida relativa. A contagem de meses com registro,
+porém, considera apenas os meses que possuem valor observado.
+
+## Resumo por unidade
+
+```{r}
+resumo_unidade <- acessos_2023_cadastro |>
+  group_by(codigo, nome, plano) |>
+  summarise(
+    meses_com_registro = sum(!is.na(acessos)),
+    total_ano = sum(replace_na(acessos, 0)),
+    media_mensal_relativa = mean(replace_na(acessos_por_m2, 0)),
+    .groups = "drop"
+  ) |>
+  arrange(desc(media_mensal_relativa))
+
+resumo_unidade
+```
+
+## Resumo por categoria
+
+```{r}
+resumo_categoria <- acessos_2023_cadastro |>
+  group_by(plano) |>
+  summarise(
+    unidades = n_distinct(codigo),
+    total_ano = sum(replace_na(acessos, 0)),
+    media_mensal_relativa = mean(replace_na(acessos_por_m2, 0)),
+    .groups = "drop"
+  )
+
+resumo_categoria
+```
+
+O total de acessos registrados no ano foi
+`r sum(resumo_categoria$total_ano)`.
+
+# Exercício 5 — Todos os anos de uma vez
+
+```{r}
+library(purrr)
+
+arquivos_anuais <- list.files(
+  "dados",
+  pattern = "^acessos_20[0-9]{2}\\.csv$",
+  full.names = TRUE
+)
+
+dados_anuais <- map(
+  arquivos_anuais,
+  \(arquivo) read_csv2(
+    arquivo,
+    na = "-",
+    locale = locale(encoding = "Latin1"),
+    col_types = cols(
+      codigo = col_character(),
+      jan = col_double(),
+      fev = col_double(),
+      mar = col_double(),
+      abr = col_double(),
+      mai = col_double(),
+      jun = col_double(),
+      jul = col_double(),
+      ago = col_double(),
+      set = col_double(),
+      out = col_double(),
+      nov = col_double(),
+      dez = col_double()
+    ),
+    show_col_types = FALSE
+  ) |>
+    mutate(origem = arquivo)
+)
+
+acessos_todos <- list_rbind(dados_anuais) |>
+  mutate(
+    ano = parse_number(basename(origem))
+  )
+
+
+acessos_todos_long <- acessos_todos |>
+  pivot_longer(
+    cols = jan:dez,
+    names_to = "mes",
+    values_to = "acessos"
+  ) |>
+  mutate(
+    mes = factor(
+      mes,
+      levels = c(
+        "jan", "fev", "mar", "abr", "mai", "jun",
+        "jul", "ago", "set", "out", "nov", "dez"
+      )
+    )
+  )
+
+acessos_todos_cadastro <- acessos_todos_long |>
+  left_join(
+    cadastro,
+    by = "codigo",
+    relationship = "many-to-one"
+  )
+```
